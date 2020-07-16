@@ -20,18 +20,16 @@ type Replacer interface {
 // Config hold the information which is needed to receive the
 // json data from the spring config server and parse and transform them correctly.
 type Config struct {
-	Host, Port, Name, Profile, Label string
-	Replacer                         Replacer
-	environment                      *environment
-	Properties                       map[string]string
+	Host, Port, Name, Profile, Label, Token string
+	Replacer                                Replacer
+	environment                             *environment
+	Properties                              map[string]string
 }
 
 // NewConfig returns a new Config as pointer value with a default Replacer for
 // spring cloud config.
-func NewConfig(host string, port string, name string, profiles []string, label string) *Config {
-	return &Config{host, port, name, strings.Join(profiles, ","), label,
-		&SpringReplacer{"${", "}", ":"},
-		nil, nil}
+func NewConfig(host string, port string, name string, profiles []string, label string, token string) *Config {
+	return &Config{host, port, name, strings.Join(profiles, ","), label, token, &SpringReplacer{"${", "}", ":"}, nil, nil}
 }
 
 // Fetch fetches the json data from the spring config server, see:
@@ -43,8 +41,12 @@ func (cfg *Config) Fetch(showJson bool, verbose bool) error {
 	if verbose {
 		fmt.Fprintln(os.Stderr, "Fetching config from server at:", url)
 	}
-
-	resp, err := http.Get(url)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	if cfg.Token != "" {
+		req.Header.Set("X-Config-Token", cfg.Token)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

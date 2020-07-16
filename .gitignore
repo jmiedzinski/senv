@@ -1,2 +1,6 @@
 *.iml
 .idea
+.vscode/launch.json
+senv/senv
+go.mod
+go.sum

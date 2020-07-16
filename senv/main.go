@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/jamowei/senv"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
-	"bytes"
 	"syscall"
+
+	"github.com/jamowei/senv"
+	"github.com/spf13/cobra"
 )
 
-const hostDefault, portDefault, nameDefault, labelDefault = "127.0.0.1", "8888", "application", "master"
+const hostDefault, portDefault, nameDefault, labelDefault, tokenDefault = "127.0.0.1", "8888", "application", "master", ""
 
 var profileDefault = []string{"default"}
 
@@ -18,7 +19,7 @@ var version = "0.0.0"
 var date = "2018"
 
 var (
-	host, port, name, label          string
+	host, port, name, label, token   string
 	profiles                         []string
 	noSysEnv, json, verbose, content bool
 )
@@ -63,7 +64,7 @@ Example call:
 	PreRun:       warningDefault,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := senv.NewConfig(host, port, name, profiles, label)
+		cfg := senv.NewConfig(host, port, name, profiles, label, token)
 		if err := cfg.Fetch(json, verbose); err != nil {
 			return err
 		}
@@ -127,7 +128,7 @@ var fileCmd = &cobra.Command{
 	PreRun:       warningDefault,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := senv.NewConfig(host, port, name, profiles, label)
+		cfg := senv.NewConfig(host, port, name, profiles, label, token)
 		if len(args) == 1 {
 			return cfg.FetchFile(args[0], content, verbose)
 		} else if len(args) > 1 {
@@ -154,6 +155,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&host, "host", hostDefault, "configserver host")
 	rootCmd.PersistentFlags().StringVar(&port, "port", portDefault, "configserver port")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", nameDefault, "spring.application.name")
+	rootCmd.PersistentFlags().StringVarP(&token, "token", "t", tokenDefault, "x-config-token")
 	rootCmd.PersistentFlags().StringSliceVarP(&profiles, "profiles", "p", profileDefault, "spring.active.profiles")
 	rootCmd.PersistentFlags().StringVarP(&label, "label", "l", labelDefault, "config-repo label to be used")
 	rootCmd.AddCommand(envCmd)

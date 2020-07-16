@@ -21,6 +21,7 @@ const (
 	badprops  = "badprops"
 	file      = "test.txt"
 	label     = "master"
+	token     = "token"
 )
 
 var profiles = []string{"dev", "prod"}
@@ -157,7 +158,7 @@ func TestConfig(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	conf := NewConfig(host, port, name, profiles, label)
+	conf := NewConfig(host, port, name, profiles, label, token)
 
 	err := conf.Fetch(true, true)
 	check(t, err)
@@ -193,9 +194,9 @@ func TestFailures(t *testing.T) {
 	defer stopServer()
 	time.Sleep(1 * time.Second)
 
-	cfg1 := NewConfig(host, port, badjson, profiles, label)
-	cfg2 := NewConfig(host, wrongport, name, profiles, label)
-	cfg3 := NewConfig(host, port, badprops, profiles, label)
+	cfg1 := NewConfig(host, port, badjson, profiles, label, token)
+	cfg2 := NewConfig(host, wrongport, name, profiles, label, token)
+	cfg3 := NewConfig(host, port, badprops, profiles, label, token)
 
 	err := cfg1.Fetch(false, true)
 	checkInverse(t, err)
