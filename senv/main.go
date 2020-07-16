@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/jamowei/senv"
@@ -76,16 +77,20 @@ Example call:
 }
 
 func runCommand(args []string, props map[string]string, noSysEnv bool) error {
-	repl := senv.SpringReplacer{Opener: "${", Closer: "}", Default: ":"}
-	for i, arg := range args {
-		if val, err := repl.Replace(arg, props); err == nil {
-			args[i] = val
-		}
-	}
+	// repl := senv.SpringReplacer{Opener: "${", Closer: "}", Default: ":"}
+	// for i, arg := range args {
+	// 	if val, err := repl.Replace(arg, props); err == nil {
+	// 		args[i] = val
+	// 	}
+	// }
 	cmd := exec.Command(args[0], args[1:]...)
 	if !noSysEnv {
 		cmd.Env = os.Environ()
 	}
+	for key, element := range props {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=\"%s\"", strings.ReplaceAll(key, ".", "_"), element))
+	}
+
 	var buffSout, buffSerr bytes.Buffer
 	cmd.Stdout = &buffSout
 	cmd.Stderr = &buffSerr

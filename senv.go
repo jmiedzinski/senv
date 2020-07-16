@@ -112,6 +112,8 @@ func (cfg *Config) Process() error {
 	if env != nil && env.PropertySources != nil {
 		//merge propertySources into one map
 		mergedProperties := mergeProps(env.PropertySources)
+		mergedProperties["profile"] = cfg.Profile
+		mergedProperties["spring.application.name"] = cfg.Name
 
 		if cfg.Replacer != nil {
 
@@ -147,9 +149,9 @@ func mergeProps(pSources []propertySource) (merged map[string]string) {
 // SpringReplacer needs the opening and closing string
 // for detecting a variables that must be replaced.
 type SpringReplacer struct {
-	Opener      string
-	Closer      string
-	Default		string
+	Opener  string
+	Closer  string
+	Default string
 }
 
 // Replace replaces all variables with the defined opening and
