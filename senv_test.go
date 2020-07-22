@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -178,15 +176,6 @@ func TestConfig(t *testing.T) {
 	assertEqual(t, props["total[1]"], "12342.23")
 	assertEqual(t, props["ship-to.address.city"], "Royal Oak")
 
-	err = conf.FetchFile(file, true, true)
-	check(t, err)
-	err = conf.FetchFile(file, false, true)
-	check(t, err)
-	cnt, err := ioutil.ReadFile(file)
-	check(t, err)
-	assertEqual(t, string(cnt), plainData)
-	os.Remove(file)
-
 }
 
 func TestFailures(t *testing.T) {
@@ -202,9 +191,6 @@ func TestFailures(t *testing.T) {
 	checkInverse(t, err)
 
 	err = cfg2.Fetch(false, true)
-	checkInverse(t, err)
-
-	err = cfg2.FetchFile("test.txt", true, true)
 	checkInverse(t, err)
 
 	err = cfg3.Fetch(false, true)

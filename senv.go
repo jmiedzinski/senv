@@ -1,10 +1,8 @@
 package senv
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -68,40 +66,6 @@ func (cfg *Config) Fetch(showJson bool, verbose bool) error {
 	}
 
 	cfg.environment = env
-	return nil
-}
-
-// FetchFile download a file from the spring config server, see:
-// https://cloud.spring.io/spring-cloud-config/single/spring-cloud-config.html#_serving_plain_text
-func (cfg *Config) FetchFile(filename string, printFile bool, verbose bool) error {
-	url := fmt.Sprintf("http://%s:%s/%s/%s/%s/%s", cfg.Host, cfg.Port, cfg.Name, cfg.Profile, cfg.Label, filename)
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Fetching file \"%s\" from server at: %s\n", filename, url)
-	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if printFile {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		fmt.Println(buf.String())
-	} else {
-		out, err := os.Create(filename)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

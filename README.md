@@ -11,6 +11,8 @@ It fetches properties from a Spring cloud-config-server
 and make them available via system environment variables
 For more information on spring cloud config take a look [here](https://cloud.spring.io/spring-cloud-config/).
 
+This for extends original project by adding integration with Hashicorp Vault. While Vault itself is integrated with Spring cloud config server, a custom X-Config-Token is needed to allow SCCS to fetch secrets from vault instance. Token have to be obtained outside of an app and passed with "-t" argument
+
 # Install
 
 You can get the latest binary using Go:

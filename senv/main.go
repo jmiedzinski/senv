@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,17 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const hostDefault, portDefault, nameDefault, labelDefault, tokenDefault = "127.0.0.1", "8888", "application", "master", ""
+const hostDefault, portDefault, nameDefault, labelDefault, tokenDefault = "127.0.0.1", "8080", "application", "master", ""
 
 var profileDefault = []string{"default"}
 
-var version = "0.0.0"
-var date = "2018"
+var version = "1.0.0"
+var date = "2020"
 
 var (
-	host, port, name, label, token   string
-	profiles                         []string
-	noSysEnv, json, verbose, content bool
+	host, port, name, label, token    string
+	profiles                          []string
+	noSysEnv, json, verbose, sanitize bool
 )
 
 var errExitCode = 0
@@ -77,41 +78,30 @@ Example call:
 }
 
 func runCommand(args []string, props map[string]string, noSysEnv bool) error {
-	// repl := senv.SpringReplacer{Opener: "${", Closer: "}", Default: ":"}
-	// for i, arg := range args {
-	// 	if val, err := repl.Replace(arg, props); err == nil {
-	// 		args[i] = val
-	// 	}
-	// }
 	cmd := exec.Command(args[0], args[1:]...)
 	if !noSysEnv {
 		cmd.Env = os.Environ()
 	}
 	for key, element := range props {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=\"%s\"", strings.ReplaceAll(key, ".", "_"), element))
+		var envVarKey = key
+		if sanitize {
+			envVarKey = strings.ReplaceAll(key, ".", "_")
+			envVarKey = strings.ReplaceAll(key, "-", "_")
+			envVarKey = strings.ToUpper(envVarKey)
+		}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", envVarKey, element))
 	}
 
-	var buffSout, buffSerr bytes.Buffer
-	cmd.Stdout = &buffSout
-	cmd.Stderr = &buffSerr
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 	err := cmd.Run()
-
-	serr := buffSerr.String()
-	sout := buffSout.String()
 
 	if err != nil {
 		// try to get the exit code
 		if exitError, ok := err.(*exec.ExitError); ok {
 			ws := exitError.Sys().(syscall.WaitStatus)
 			errExitCode = ws.ExitStatus()
-		} else {
-			// This will happen (in OSX) if `name` is not available in $PATH,
-			// in this situation, exit code could not be get, and stderr will be
-			// empty string very likely, so we use the default fail code, and format err
-			// to string and set to stderr
-			if serr == "" {
-				serr = err.Error()
-			}
 		}
 	} else {
 		// success, errExitCode should be 0 if go is ok
@@ -119,44 +109,17 @@ func runCommand(args []string, props map[string]string, noSysEnv bool) error {
 		errExitCode = ws.ExitStatus()
 	}
 
-	fmt.Fprintln(os.Stderr, serr)
-	fmt.Fprintln(os.Stdout, sout)
+	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
+	fmt.Printf("\nout:\n%s\nerr:\n%s\n", outStr, errStr)
 
 	return nil
-}
-
-var fileCmd = &cobra.Command{
-	Use:          "file [filenames]",
-	Short:        "Receives static file(s)",
-	Long:         `Receives static file(s) from the spring-cloud-config-server`,
-	Args:         cobra.MinimumNArgs(1),
-	PreRun:       warningDefault,
-	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := senv.NewConfig(host, port, name, profiles, label, token)
-		if len(args) == 1 {
-			return cfg.FetchFile(args[0], content, verbose)
-		} else if len(args) > 1 {
-			isErr := false
-			for i, file := range args {
-				if err := cfg.FetchFile(file, content, verbose); err != nil {
-					isErr = true
-					fmt.Fprintf(os.Stderr, "error receiving %v. file %s: %s\n", i+1, file, err)
-				}
-			}
-			if isErr {
-				return fmt.Errorf("error while receiving files")
-			}
-		}
-		return nil
-	},
 }
 
 func init() {
 	envCmd.PersistentFlags().BoolVarP(&noSysEnv, "nosysenv", "s", false, "start without system-environment variables")
 	envCmd.PersistentFlags().BoolVarP(&json, "json", "j", false, "print json to stdout")
 	envCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose")
-	fileCmd.PersistentFlags().BoolVarP(&content, "content", "c", false, "print file to stdout")
+	envCmd.PersistentFlags().BoolVarP(&sanitize, "sanitize", "x", true, "sanitize keys")
 	rootCmd.PersistentFlags().StringVar(&host, "host", hostDefault, "configserver host")
 	rootCmd.PersistentFlags().StringVar(&port, "port", portDefault, "configserver port")
 	rootCmd.PersistentFlags().StringVarP(&name, "name", "n", nameDefault, "spring.application.name")
@@ -164,5 +127,4 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVarP(&profiles, "profiles", "p", profileDefault, "spring.active.profiles")
 	rootCmd.PersistentFlags().StringVarP(&label, "label", "l", labelDefault, "config-repo label to be used")
 	rootCmd.AddCommand(envCmd)
-	rootCmd.AddCommand(fileCmd)
 }
